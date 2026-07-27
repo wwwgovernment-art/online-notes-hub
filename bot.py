@@ -139,4 +139,8 @@ SEND /create TO BEGIN , AFTERWARDS IT WILL ASK YOU FOR A URL WHICH WILL BE USED 
 OWNER - @darkhacker1230"""
     
     bot.reply_to(message, help_text)
+    @bot.message_handler(commands=['create'])
+def create_link(message):
+    user_state[message.from_user.id] = "waiting_for_link"
+    bot.reply_to(message, "🔗 Please send the URL you want to use for tracking:")
 bot.infinity_polling()
