@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 
 // ===== TERI VALUES DAAL =====
-const TELEGRAM_TOKEN = "8840717306:AAEOhGfFnZsSWGtdOChaJaGC4JLfReeKBaU";
+const TELEGRAM_TOKEN = "8840717306:AAFnJ695LhZEm8kZOPdMyxHHE2EOselmxec";
 const OWNER_CHAT_ID = "8179349999";
 const IMGBB_API_KEY = "0959c9368daed87c0f1a8d44c203a8b3";
 // =============================
